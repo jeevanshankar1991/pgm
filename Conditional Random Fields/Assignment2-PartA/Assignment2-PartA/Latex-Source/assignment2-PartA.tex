@@ -1,0 +1,188 @@
+\documentclass[11pt]{article}
+
+
+\input{testpoints}
+
+\usepackage{fullpage}
+\usepackage{graphicx}
+\usepackage[english]{babel}
+\usepackage[latin1]{inputenc}
+\usepackage{times}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\newcommand{\argmax}{\mathop{\arg\max}}
+\newcommand{\deriv}[1]{\frac{\partial}{\partial {#1}} }
+\newcommand{\dsep}{\mbox{dsep}}
+\newcommand{\Pa}{\mathop{Pa}}
+\newcommand{\ND}{\mbox{ND}}
+\newcommand{\De}{\mbox{De}}
+\newcommand{\Ch}{\mbox{Ch}}
+\newcommand{\graphG}{{\mathcal{G}}}
+\newcommand{\graphH}{{\mathcal{H}}}
+\newcommand{\setA}{\mathcal{A}}
+\newcommand{\setB}{\mathcal{B}}
+\newcommand{\setS}{\mathcal{S}}
+\newcommand{\setV}{\mathcal{V}}
+\DeclareMathOperator*{\union}{\bigcup}
+\DeclareMathOperator*{\intersection}{\bigcap}
+\DeclareMathOperator*{\Val}{Val}
+\newcommand{\mbf}[1]{{\mathbf{#1}}}
+\newcommand{\eq}{\!=\!}
+\newcommand{\cut}[1]{}
+
+\begin{document}
+
+{\centering
+  \rule{6.3in}{2pt}
+  \vspace{1em}
+  {\Large
+    CS688: Graphical Models - Spring 2014\\
+    Assignment 2: Part A\\
+  }
+  \vspace{1em}
+  Assigned: Tuesday, Feb 18th. Due: Thursday, Feb 27th 2:30pm\\
+  \vspace{0.1em}
+  \rule{6.3in}{1.5pt}
+}\vspace{1em}
+
+\textbf{General Instructions:} Submit a report with the answers to each question at the start of class on the date the assignment is due. You are encouraged to typeset your solutions. To help you get started, the full \LaTeX source of the assignment is included with the assignment materials. For your assignment to be considered ``on time'', you must upload a zip file containing all of your code to Moodle by the due date. Make sure the code is sufficiently well documented that it's easy to tell what it's doing. You may use any programming language you like. For this assignment, you may \textbf{not} use existing code libraries for inference and learning with CRFs or MRFs. If you think you've found a bug with the data or an error in any of the assignment materials, please post a question to the Moodle discussion forum. Make sure to list in your report any outside references you consulted (books, articles, web pages, etc.) and any students you collaborated with.\\
+
+\textbf{Academic Honesty Statement:} Copying solutions from external sources (books, web pages, etc.) or other students is considered cheating. Sharing your solutions with other students is also considered cheating. Any detected cheating will result in a grade of 0 on the assignment for all students involved, and potentially a grade of F in the course.\\
+
+\textbf{Introduction:} In this assignment, you will experiment with different aspects of modeling, learning, and inference with chain-structured conditional random fields (CRFs). This assignment focuses on the task of 
+optical character recognition (OCR). We will explore an approach that bridges computer vision and natural language processing by jointly modeling the labels of sequences of noisy character images that form complete words. This is a natural problem for chain-structured CRFs. The node potentials can capture bottom-up information about the character represented by each image, while the edge potentials can capture information about the co-occurrence of characters in adjacent positions within a word. 
+\\
+
+\textbf{Data: } The underlying data are a set of $N$ sequences corresponding to images of the characters in individual words. Each word $i$ consists of $L_i$ positions. For each position $j$ in word $i$, we have a noisy binary image of the character in the that position. In this assignment, we will use the raw pixel values of the character images as features in the CRF. The character images are $20\times 16$ pixels. We convert them into $1\times 320$ vectors. We include a constant bias feature along with the pixels in each image, giving a final feature vector of
+length $F=321$. $x_{ijf}$ indicates the value of feature $f$ in position $j$ of word $i$. The provided training and test files \textit{train\_img<i>.txt} and \textit{test\_img<i>.txt} list the character image $\mbf{x}_{ij}$ on row $j$ of file $i$ as a $321$-long space-separated sequence.\footnote{Images are also provided for each training and test word as standard PNG-format files \textit{train\_img<i>.png} and \textit{test\_img<i>.png}. These are for your reference and not for use in training or testing algorithms.}
+The data files are in the column-major format.
+Given the sequence of character images $\mbf{x}_i=[\mbf{x}_{i1},...,\mbf{x}_{iL_i}]$ corresponding to test word $i$, our goal is to infer the corresponding sequence of character labels $\mbf{y}_i=[y_{i1},...,y_{iL_i}]$. To reduce the computational complexity of exhaustive inference, we will use a limited set of characters corresponding to the $10$ most frequently used characters in the English language: ``etainoshrd''. There are thus $C=10$ possible labels for each word position.
+The character labels for each training and test word are available in the files
+\textit{train\_words.txt} and \textit{test\_words.txt}. The figure below shows several example words along
+with their images.  
+
+\begin{center}
+  \begin{minipage}[t]{1.4in}\centering
+    shoot
+    \includegraphics[scale=1]{images/train_img1.png}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{1.4in}\centering
+    indoor
+    \includegraphics[scale=1]{images/train_img2.png}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{1.4in}\centering
+    threee
+    \includegraphics[scale=1]{images/train_img3.png}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{1.4in}\centering
+    trait
+    \includegraphics[scale=1]{images/train_img4.png}
+  \end{minipage}
+\end{center}
+
+
+
+\textbf{Model:} The conditional random field model is a conditional model $P_W(\mbf{y}_i|\mbf{x}_i)$ of the sequence of class labels $\mbf{y}_i$ given the sequence of feature vectors $\mbf{x}_i$ that depends on a collection of parameters $W$. The CRF graphical 
+model is shown below for a sequence of length $4$.\\
+
+\begin{center}
+    \centering
+    \textbf{Conditional Random Field}\\\vspace{10pt}
+    \includegraphics[scale=0.4]{crf.png}
+\end{center}
+
+The probabilistic model for the CRF we use in this assignment is given below. The CRF model contains one feature parameter $W^F_{cf}$ for each of the $C=10$ character labels and $F=321$ features. The feature parameters encode the compatibility between feature values and character labels. The CRF also contains one transition parameter $W^T_{cc'}$ for each pair of character labels $c$ and $c'$.  The transition parameters encode the compatibility between adjacent character labels in the word. We parameterize the model in log-space, so all of the parameters can take arbitrary (positive or negative) real values. We have one feature potential
+$\phi^F_j(y_{ij},\mbf{x}_{ij})$ for each position $j$ in word $i$ and one transition potential for each pair of adjacent labels $\phi^T_j(y_{ij},y_{ij+1})$ in word $i$.
+%
+\begin{align*}
+\phi^F_j(y_{ij},\mbf{x}_{ij}) &= \sum_{c=1}^{C}\sum_{f=1}^F W^F_{cf}[y_{ij}=c]x_{ijf} \\
+\phi^T_j(y_{ij},y_{ij+1}) &= \sum_{c=1}^{C}\sum_{c'=1}^{C}W^T_{cc'}[y_{ij}=c][y_{ij+1}=c']
+\end{align*}
+%
+As always with log-parameterized Markov networks, the joint distribution is given by the product of exponentiated
+potentials and must be explicitly normalized, as shown below. In a CRF model, the feature vectors are always conditioned on, so the joint model shown below must be transformed into a conditional model $P_{W}(\mbf{y}_i|\mbf{x}_i)$ using factor reduction before performing inference for the character labels.
+%
+\begin{align*}
+P_{W}(\mbf{y}_i,\mbf{x}_i)
+&=\frac{\displaystyle\prod_{j=1}^{L_i}\exp(\phi^F_j(y_{ij},\mbf{x}_{ij})) \cdot \prod_{j=1}^{L_i-1}\exp(\phi^T_j(y_{ij},y_{ij+1}))}
+       {\displaystyle
+         \sum_{\mbf{y}'_i}\sum_{\mbf{x}'_i}\prod_{j=1}^{L_i}\exp(\phi^F_j(y'_{ij},\mbf{x}'_{ij})) \cdot \prod_{j=1}^{L_i-1}\exp(\phi^T_j(y'_{ij},y'_{ij+1}))}\\
+&= \frac{\displaystyle
+     \exp\left(\sum_{j=1}^{L_i}\sum_{c=1}^{C}\sum_{f=1}^F W^F_{cf}[y_{ij}=c]x_{ijf}
+     +\sum_{j=1}^{L_i-1}\sum_{c=1}^{C}\sum_{c'=1}^{C}W^T_{cc'}[y_{ij}=c][y_{ij+1}=c']\right)
+   }
+   {\displaystyle
+     \sum_{\mbf{y}'_i}\sum_{\mbf{x}'_i}\exp\left(\sum_{j=1}^{L_i}\sum_{c=1}^{C}\sum_{f=1}^F
+     W^F_{cf}[y'_{ij}=c]x'_{ijf}
+     +\sum_{j=1}^{L_i-1}\sum_{c=1}^{C}\sum_{c'=1}^{C}W^T_{cc'}[y'_{ij}=c][y'_{ij+1}=c']\right)
+   }
+\end{align*}
+
+\begin{problem}{20} \textbf{Exhaustive Inference:} In this question, you will implement simple exhaustive inference for the CRF model. The code packages provides a pre-trained model for the OCR task including the feature parameters (\textit{feature-params.txt}) and the label-label transition parameters (\textit{transition-params.txt}). Use these parameters to answer the following questions. For grading purposes, make sure to list results table rows and/or columns using the character ordering ``etainoshrd''.
+
+\newpart{2} {For the first test word only, compute the node potentials $\phi'(y_{ij})$ obtained by conditioning the CRF on the observed image sequence. After conditioning, there is one node potential per position in the test word. Each node potential is a vector with one entry per character label. Report the node potential as a table for each position in the test word.} 
+
+\newpart{2} {For the first three test words, compute the value of the negative energy of the true label sequence after conditioning on the corresponding observed image sequence: 
+$$-E_W(\mbf{x}_i,\mbf{y}_i)=\sum_{j=1}^{L_i} \phi'(y_{ij}) + \sum_{j=1}^{L_i-1}\sum_{c=1}^{C}\sum_{c'=1}^{C}W^T_{cc'}[y_{ij}=c][y_{ij+1}=c'] = \sum_{j=1}^{L_i} \phi'(y_{ij}) +\sum_{j=1}^{L_i-1}W^T_{y_{ij},y_{ij+1}}$$.}
+
+\newpart{6}{For the first three test words, use exhaustive summation over all possible character label sequences to compute the value of the log partition function for the CRF model after conditioning on the corresponding observed image sequence. Report the value you compute.}
+
+\newpart{6}{For the first three test words, compute the most likely joint labeling (character sequence) word. Report both the labeling and its probability under the model.}
+
+\newpart{4}{For the first test word only, compute the marginal probability distribution over character labels for each position in the word. Report each marginal distribution using a table.} 
+
+\end{problem}
+
+\begin{problem}{40} \textbf{Sum-Product Message Passing:} In this question, you will implement the sum-product inference algorithm for the CRF model. The code packages provides a pre-trained model for the OCR task including the feature parameters (\textit{feature-params.txt}) and the label-label transition parameters (\textit{transition-params.txt}). Use these parameters to answer the following questions.
+ 
+\newpart{6}{For the first test word only, condition on the observed image sequence to obtain a chain-structured
+Markov network. Next, convert the Markov network into a clique tree with cliques $C_1=\{Y_1,Y_2\},C_2=\{Y_2,Y_3\},C_3=\{Y_3,Y_4\}$ and edges $C_1-C_2$ and $C_2-C_3$.
+Compute the clique potentials $\psi_1(Y_1,Y_2)$, $\psi_2(Y_2,Y_3)$ and $\psi_3(Y_3,Y_4)$. Include the node potential $\phi'(Y_1)$ in $C_1$, $\phi'(Y_2)$ in $C_2$, for $\phi'(Y_3)$ in $C_3$ and $\phi'(Y_4)$ in $C_3$. Each clique potential is a $10\times 10$ table. Report the $3\times 3$ block of entries between the labels ``e,t,r'' for each of the three clique potentials.}
+
+\newpart{8}{For the first test word only, use the clique tree potentials to compute the log-space sum-product messages $\delta'_{1\rightarrow 2}(Y_2)$, $\delta'_{2\rightarrow 1}(Y_2)$, $\delta'_{2\rightarrow 3}(Y_3)$, $\delta'_{3\rightarrow 2}(Y_3)$ from the clique tree potentials. Report the value of each message in a table.}
+
+\newpart{8}{For the first test word only, use the messages and the clique tree potentials to compute the log beliefs at each node in the clique tree $\beta'(Y_1,Y_2)$, $\beta'(Y_2,Y_3)$ and $\beta'(Y_3,Y_4)$. Report the $2\times 2$ block of log belief entries between the first two labels ``e'' and ``t'' only for each of the three cliques.}
+
+\newpart{8}{For the first test word only, use the computed log beliefs to compute the marginal probability distribution over each position in the word. Report the marginal distributions as tables. Also use the beliefs to compute the pairwise marginals $P(y_{i1},y_{i2}|\mbf{x}_i)$.   Report the $3\times 3$ block of entries between the labels ``e,t,r''.}
+
+\newpart{10}{Generalize the steps given above to compute the single variable and pairwise marginal probabilities for any sequence of input images. Apply your completed algorithm to compute the marginal probability distribution over the character labels given the image sequences for each word in the test set. For each position in each test word, predict the character with maximum probability. List your predictions for the first five test sequences.
+In addition, use the true character labels in \textit{test\_words.txt} to compute the average character-level accuracy over the complete test set. Report the accuracy that you find to three decimal places.}
+
+ 
+\end{problem}
+
+\begin{problem}{34} \textbf{Maximum Likelihood Learning Derivation:} In this problem, you will derive the maximum likelihood learning algorithm for conditional random field models.
+
+\newpart{8}{Write down the average log likelihood function for the CRF given a data set consisting of $N$ image sequences $\mbf{x}_i$ and label sequences $\mbf{y}_i$.} 
+
+\newpart{8}{Derive the derivative of the average log likelihood function with respect to the feature parameter $W^F_{cf}$. Show your work.} 
+
+\newpart{8}{Derive the derivative of the average log likelihood function with respect to the transition parameter $W^T_{cc'}$. Show your work.} 
+
+\newpart{8}{ Explain how the single-variable and pairwise marginal probabilities  computed by the sum-product algorithm can be used to efficiently compute both the value of the log-likelihood function and the values of the above derivatives. (Hint: the computational complexity of the algorithm you describe should be linear in the length of the chain)}
+
+\newpart{2}{Using a data set consisting of the first 50 training data cases only, compute the average log likelihood of the true label sequences given the image sequences using the supplied model parameters.}
+
+\newpart{0}{Using a data set consisting of the first 50 training data cases only, compute the derivative with respect to each model parameter of the average log likelihood of the true label sequences given the image sequences using the supplied model parameters. There is nothing to hand in for this question, but we will provide the solution to help you debug your code.}
+
+\end{problem}
+
+\begin{problem}{6} \textbf{Numerical Optimization Warm-Up:} In part B of the assignment, you will implement
+the above learning algorithm using a numerical optimizer to maximize the log likelihood. In this question, you will experiment with optimizing a basic function.
+
+\newpart{3}{Consider the objective function $f_w(x,y) = -(1-x)^2 - 100(y-x^2)^2$. Derive the derivatives of $f(x,y)$ with respect to $x$ and $y$ (the gradient function). Show your work.
+} 
+
+\newpart{3}{Select a numerical optimizer for the programming language you are using. If you haven't used it previously, study its documentation carefully. Implement the objective function and the gradient function in the form required by your numerical optimizer. Write code to use the optimizer to \textbf{maximize} $f(x,y)$. Report both the location of the maximum and the value of the objective function at the maximum. 
+} 
+
+\end{problem}
+
+
+\showpoints
+\end{document} 
