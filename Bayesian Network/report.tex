@@ -1,0 +1,244 @@
+
+\documentclass[a4paper,10pt]{report}
+% Use Package
+\usepackage[utf8]{inputenc}
+\usepackage{color}
+\usepackage{setspace}
+\usepackage{amsmath}
+\usepackage[margin=0.4in]{geometry}
+\usepackage[makeroom]{cancel}
+\usepackage{graphicx}
+\renewcommand{\familydefault}{\sfdefault}
+% End Use Package
+
+% Title Page
+\title{CMPSCI 688 : Graphical Models \\ Assignment 1}
+\author{\color{red}Jeevan Shankar \\ \texttt{jshankar@cs.umass.edu} }
+\date{\today}
+% End Title Page
+
+\begin{document}
+
+\maketitle 
+\section*{1. Factorization}
+\begin{align*}
+ P(X) &= \prod_{i=1}^{\# nodes} P(X_i | Pa_{X_i}^{G}) \\
+ P(A, G, CH, BP, HD, HR, CP, EIA, ECG) &= P(A)P(G)(CH | A, G)P(BP | G)P(HD | CH, BP)
+                              \nonumber \\ &\qquad{} \times P(HR | A,BP, HD) P(CP | HD)P(EIA|HD)P(ECG |HD) \\                                     
+\end{align*}
+\section*{2. Likelihood Function}
+\begin{align*}
+ L(\theta) &= \dfrac{1}{N} \sum_{n=1}^{N} \log P(X = x_n) \\
+           &= \dfrac{1}{N} \sum_{n=1}^{N} \log P(A = a_n, G = g_n, CH = ch_n, BP = bp_n , HD = hd_n, HR = hr_n , CP = cp_n, \nonumber \\ 
+              &\qquad{} EIA = eia_n, ECG = ecg_n) \\
+           &= \dfrac{1}{N} \sum_{n=1}^{N} \log P(A = a_n) + \log P(G = g_n ) + \log P(CH = ch_n | A = a_n , G = g_n) + \log P(BP = bp_n | G = g_n) \nonumber \\ 
+              &\qquad{} + \log P(HD = hd_n | CH = ch_n, BP = bp_n ) + \log P(HR = hr_n | A = a_n, BP = bp_n, HD = hd_n) + \nonumber \\ 
+              &\qquad{} + \log P(CP = cp_n | HD = hd_n) + \log P(EIA = eia_n | HD = hd_n ) + \log P(ECG = ecg_n | HD = hd_n) \\
+           &= \dfrac{1}{N} \sum_{n=1}^{N}  \sum_{a} [a = a_n] \log P(A = a) + \sum_{g} [g = g_n] \log P(G = g)  \nonumber \\
+              &\qquad{} + \sum_{ch, a, g} [ch = ch_n, a = a_n,g = g_n] \log P(CH = ch | A = a, G = g) + \sum_{bp, g} [bp = bp_n, g = g_n] \log P(BP = bp | G = g) \nonumber \\ 
+              &\qquad{} + \sum_{hd, ch, bp} [hd = hd_n, ch = ch_n, bp = bp_n] \log P(HD = hd | CH = ch , BP = bp) \nonumber \\
+              &\qquad{} + \sum_{hr, a, bp, hd} [hr = hr_n, a = a_n, bp = bp_n, hd = hd_n] \log P(HR = hr | A = a, BP = bp, HD = hd) \nonumber \\
+              &\qquad{} + \sum_{eia, hd} [eia = eia_n, hd = hd_n] \log P(EIA = eia | HD = hd) + \sum_{ecg, hd} [ecg = ecg_n, hd = hd_n] \log P(ECG = ecg | HD = hd) \nonumber \\
+              &\qquad{} + \sum_{cp,hd } [cp = cp_n, hd = hd_n] \log P(CP = cp | HD = hd)  \\
+L(\theta)          &= \dfrac{1}{N} \sum_{n=1}^{N} \sum_{a} [a = a_n] \log \theta_a^{A} + \sum_{g} [g = g_n] \log \theta_{g}^{G} + \sum_{ch, a, g} [ch = ch_n, a = a_n, g = g_n] \log \theta_{ch | a, g}^{CH}
+              + \sum_{bp, g} [bp = bp_n, g = g_n] \log \theta_{bp | g}^{BP} \nonumber \\
+              &\qquad{} + \sum_{hd, ch, bp} [hd = hd_n, ch = ch_n, bp = bp_n] \log \theta_{hd | ch, bp }^{HD} + \sum_{hr, a, bp, hd} [hr = hr_n, a = a_n, bp = bp_n, hd = hd_n] \log \theta_{hr | a, bp, hd}^{HR} \nonumber \\
+              &\qquad{} + \sum_{cp, hd} [cp = cp_n , hd = hd_n] \log \theta_{cp | hd}^{CP} + \sum_{eia, hd} [eia = eia_n, hd = hd_n] \log \theta_{eia | hd}^{EIA} + \sum_{ecg, hd} [ecg = ecg_n, hd = hd_n] \log \theta_{ecg|hd}^{ECG}
+\end{align*}
+
+
+\section*{3. Maximum Likelihood Estimators}
+Forming the Lagrangian, we get
+\begin{align*}
+ L(\theta, \lambda) &= \dfrac{1}{N} \sum_{n=1}^{N} \left( \sum_{a} [a = a_n] \log \theta_{a}^{A} \right) - \lambda^{A} \left( \sum_a \theta_a^{A} - 1 \right) \nonumber \\
+                       &\qquad{} + \dfrac{1}{N} \sum_{n=1}^{N} \left( \sum_{g} [g = g_n] \log \theta_{g}^{G} \right)  - \lambda^{G} \left(\sum_{g}\theta_{g}^{G} - 1 \right) \nonumber \\
+                       &\qquad{} + \dfrac{1}{N} \sum_{n=1}^{N} \left( \sum_{ch, a, g} [ch = ch_n, a =  a_n, g = g_n) \log \theta_{ch | a, g}^{CH} \right)  - \sum_{a, g} \lambda_{a, g}^{CH} \left( \sum_{ch} \theta_{ch | a, g}^{CH} - 1 \right) \nonumber \\
+                       &\qquad{} + \dfrac{1}{N} \sum_{n=1}^{N} \left( \sum_{bp, g} [bp = bp_n, g = g_n] \log \theta_{bp | g}^{BP} \right) - \sum_{g} \lambda_{g}^{BP} \left(\sum_{bp} \theta_{bp | g}^{BP} -1 \right) \nonumber \\
+                       &\qquad{} +  \dfrac{1}{N} \sum_{n=1}^{N} \left(\sum_{hd, ch, bp} [hd = hd_n, ch = ch_n, bp = bp_n] \log \theta_{hd | ch, bp}^{HD} \right) - \sum_{ch, bp} \lambda_{ch, bp}^{HD} \left( \sum_{hd} \theta_{hd | bp, ch}^{HD} - 1\right) \nonumber \\
+                       &\qquad{} +  \dfrac{1}{N} \sum_{n=1}^{N} \left( \sum_{hr, a, bp, hd} [hr = hr_n, a = a_n, bp = bp_n, hd = hd_n ] \log \theta_{hr | a, bp, hd}^{HR} \right) - \sum_{a, bp, hd} \lambda_{a, bp, hd}^{HR} \left( \sum_{hr} \theta_{hr | a, bp, hd}^{HR} -1 \right) \nonumber \\
+                       &\qquad{} +  \dfrac{1}{N} \sum_{n=1}^{N} \left( \sum_{cp, hd} [cp = cp_n, hd = hd_n] \log \theta_{cp | hd}^{CP} \right) -\sum_{hd} \lambda_{hd}^{CP} \left( \sum_{cp} \theta_{cp | hd}^{CP} - 1 \right) \nonumber \\  
+                       &\qquad{} +  \dfrac{1}{N} \sum_{n=1}^{N} \left( \sum_{eia, hd} [eia = eia_n, hd = hd_n] \log \theta_{eia | hd}^{CP} \right) -\sum_{hd} \lambda_{hd}^{EIA} \left( \sum_{eia} \theta_{eia | hd}^{EIA} - 1 \right) \nonumber \\
+                       &\qquad{} +  \dfrac{1}{N} \sum_{n=1}^{N} \left( \sum_{ecg, hd} [ecg = ecg_n, hd = hd_n] \log \theta_{ecg | hd}^{CP} \right) -\sum_{hd} \lambda_{hd}^{ECG} \left( \sum_{ecg} \theta_{ecg | hd}^{ECG} - 1 \right) \nonumber \\
+\end{align*}
+Now, to get MLE estimate of $\theta_{L | 1, H, Y}^{HR}$, we put $\dfrac{\partial L(\theta, \lambda) }{\partial \theta_{L | 1, H, Y}^{HR} } = 0$ and $\dfrac{\partial L(\theta, \lambda) }{\partial \theta_{H | 1, H, Y}^{HR} } = 0$
+\begin{equation}
+ \dfrac{1}{N} \sum_{n=1}^{N} [hr_n = L, a_n = 1, bp_n = H, = Y] \dfrac{1}{\theta_{L|1, H, Y}^{HR}} - \lambda_{1, H, Y}^{HR} = 0 
+ \label{eq:1}
+\end{equation}
+\begin{equation}
+ \dfrac{1}{N} \sum_{n=1}^{N} [hr_n = H, a_n = 1, bp_n = H, = Y] \dfrac{1}{\theta_{H|1, H, Y}^{HR}} - \lambda_{1, H, Y}^{HR} = 0
+ \label{eq:2}
+\end{equation}
+To eliminate $\lambda_{H | 1, H, Y}^{HR}$, we can use the constraint 
+$\theta_{L | 1, H, Y}^{HR} + \theta_{H | 1, H, Y}^{HR} = 1$
+\begin{align*}
+ \dfrac{1}{N} \sum_{n=1}^{N} [hr_n = L, a_n = 1, bp_n = H, hd_n= Y] \dfrac{1}{\lambda_{1, H, Y}^{HR}} + 
+ \dfrac{1}{N} \sum_{n=1}^{N} [hr_n = H, a_n = 1, bp_n = H, hd_n= Y] \dfrac{1}{\lambda_{1, H, Y}^{HR}} &= 1 \\
+\end{align*}
+\begin{equation}
+ \dfrac{1}{N} \sum_{n=1}^{N} [a_n=1, bp_n = H, hd_n = Y] \dfrac{1}{\lambda_{1, H, Y}^{HR} } = 1
+ \label{eq:3}
+\end{equation}
+Now, substitution (~\ref{eq:3}) in (~\ref{eq:1}), we get
+\begin{align*}
+ \dfrac{1}{N} \sum_{n=1}^{N} [hr_n = L, a_n = 1, bp_n = H, = Y] \dfrac{1}{\theta_{L|1, H, Y}^{HR}} - \dfrac{1}{N} \sum_{n=1}^{N} [a_n=1, bp_n = H, hd_n = Y] = 0  \\
+ \theta_{L | 1, H, Y }^{HR} = \dfrac{\sum_{n=1}^{N} [hr_n = L, a_n = 1, bp_n = H, hd_n= Y] }{\sum_{n=1}^{N} [a_n = 1, bp_n = H, hd_n= Y] }
+\end{align*}
+Thus,
+\begin{equation*}
+ \boxed{\theta_{L | 1, H, Y }^{HR} = \dfrac{\sum_{n=1}^{N} [hr_n = L, a_n = 1, bp_n = H, hd_n= Y] }{\sum_{n=1}^{N} [a_n = 1, bp_n = H, hd_n= Y] } }
+\end{equation*}
+
+
+\section*{4. Learning}
+\vspace{1em}
+\begin{tabular}{|c|c|}\hline
+P(A) & A  \\ \hline\hline
+0.185 & $<$ 45 \\ \hline
+0.268 & 45-55  \\ \hline
+0.547 & $\ge$ 55 \\ \hline
+\end{tabular}
+\vspace{1em}
+
+\begin{tabular}{|c|c|c|}\hline
+P(BP$|$G) & BP & G  \\ \hline\hline
+0.333 & Low & Female \\ \hline
+0.667 & High & Female \\ \hline
+0.476 & Low  &  Male \\ \hline
+0.524 & High & Male \\ \hline
+\end{tabular}
+\vspace{1em}
+
+\begin{tabular}{|c|c|c|c|}\hline
+P(HD$|$BP, CH) & HD & BP & CH  \\ \hline\hline
+0.5 & N & Low & Low \\ \hline
+0.5 & Y & Low & Low \\ \hline
+0.556 & N  & High & Low \\ \hline
+0.444 & Y & High & Low \\ \hline
+0.576 & N & Low & High\\ \hline
+0.424 & Y & Low & High \\ \hline
+0.492 & N  & High & High \\ \hline
+0.508 & Y & High & High \\ \hline
+\end{tabular}
+\vspace{1em}
+
+\begin{tabular}{|c|c|c|c|c|}\hline
+P(HR$|$A, BP, HD) & HR & A & BP & HD  \\ \hline\hline
+0.056 & Low & $< 45$  & Low & N\\ \hline
+0.944 & High & $< 45$  & Low & N\\ \hline
+0.227 & Low & $45-55$  & Low & N\\ \hline
+0.773 & High & $45-55$  & Low & N\\ \hline
+0.526 & Low & $\ge 55$  & Low & N\\ \hline
+0.474 & High & $\ge 45$  & Low & N\\ \hline
+0.071 & Low & $< 45$  & High & N\\ \hline
+0.929 & High & $< 45$  & High & N\\ \hline
+0.174 & Low & $45-55$  & High & N\\ \hline
+0.826 & High & $45-55$  & High & N\\ \hline
+0.219 & Low & $\ge 55$  & High& N\\ \hline
+0.781 & High & $\ge 45$  & High & N\\ \hline
+0.5 & Low & $< 45$  & Low & Y\\ \hline
+0.5 & High & $< 45$  & Low & Y\\ \hline
+0.462 & Low & $45-55$  & Low & Y\\ \hline
+0.538 & High & $45-55$  & Low & Y\\ \hline
+0.609 & Low & $\ge 55$  & Low & Y\\ \hline
+0.391 & High & $\ge 45$  & Low & Y\\ \hline
+0.667 & Low & $< 45$  & High & Y\\ \hline
+0.333 & High & $< 45$  & High & Y\\ \hline
+0.429 & Low & $45-55$  & High & Y\\ \hline
+0.571 & High & $45-55$  & High & Y\\ \hline
+0.525 & Low & $\ge 55$  & High& Y\\ \hline
+0.475 & High & $\ge 45$  & High & Y\\ \hline
+\end{tabular}
+\vspace{1em}
+
+
+
+\section*{5. Probability Queries}
+\subsection*{Part (a)}
+\begin{align*}
+ P(CH = L | A = 2, G = M, CP = None, BP = L, ECG = normal, HR = L, EIA = no, HD = no) = \\
+ \dfrac{P(CH = Low, A = 2, G = M, G = M, CP = None, BP = L, ECG = normal, HR = L, EIA = no, HD = no)}
+         {P(A = 2, G = M, CP = None, BP = L, ECG = normal, HR = L, EIA = no, HD = no)} =   \\
+  \dfrac{P(CH = L, A = 2, G = M, G = M, CP = None, BP = L, ECG = normal, HR = L, EIA = no, HD = no) }
+         {\sum_{ch \in (L, H) }P(CH = ch, A = 2, G = M, CP = None, BP = L, ECG = normal, HR = L, EIA = no, HD = no} = \\
+  \dfrac{P(CH = L | A = 2, G = M)P(HD = L | CH = L, BP = L)}{\sum_{ch \in (L, H)} P(CH = ch | A = 2, G = M) P(HD = L| CH = ch, BP = L)} 
+     = \tag{\text{After applying factorization to Joint Probability} } \\
+  0.135 \tag{\text{Looking up in CPTs of CH, HD} }
+\end{align*} \\
+Therefore, $P(CH = L | A = 2, G = M, CP = None, BP = L, ECG = normal, HR = L, EIA = no, HD = no)) = 0.135$ and \\
+          $P(CH = H |  A = 2, G = M, CP = None, BP = L, ECG = normal, HR = L, EIA = no, HD = no)) = 0.865$
+\subsection*{Part (b) }
+\small{
+\begin{align*}
+  P(BP =L | A = 2, CP = Typical, CH = H, ECG = normal, HR = H, EIA = yes, HD = no) =\\  
+  \dfrac{P(BP = L, A = 2, CP = Typical, CH = H, ECG = normal, HR = H, EIA = yes, HD = no)}
+          {\sum_{bp} P(BP = bp, A = 2, CP = Typical, CH = H, ECG = normal, HR = H, EIA = yes, HD = no)} = \\ 
+  \dfrac{\sum_{g} P(BP = L, A = 2, G = g, CP = Typical, CH = H, ECG = normal, HR = H, EIA = yes, HD = no)}
+    {\sum_{bp} \sum_{g} P(BP = bp, A = 2, G = g, CP = Typical, CH = H, ECG = normal, HR = H, EIA = yes, HD = no)} = \\ 
+  \dfrac{\sum_{g} P(G = g) P(CH = H | G = g, A = 2) P(BP = L | G = g) P(HR = H| A = 2, BP = L, HD = no)P(HD = no| BP = L, CH = H)}
+    {\sum_{bp} \sum_{g} P(G = g) P(CH = H | G = g, A = 2) P(BP = bp | G = g) P(HR = H| A = 2, BP = bp, HD = no)P(HD = no| BP = bp, CH = H)}
+    \tag{\text{After applying factorization to Joint Probability and Simplifying} } \\
+  = 0.455 \tag{\text{Looking up in the CPTs }}
+\end{align*}\\
+}
+Therefore, $P(BP = L|  A = 2, CP = Typical, CH = H, ECG = normal, HR = H, EIA = yes, HD = no ) = 0.455 $ and \\
+           $P(BP = H |  A = 2, CP = Typical, CH = H, ECG = normal, HR = H, EIA = yes, HD = no) = 0.545 $
+\section*{6. Classification}
+\subsection*{Part (a) :}
+\subsection*{Part (b) :}
+$P(HD = N | A = a, G = g, CH = ch, BP = bp, HR = hr, CP = cp, EIA = eia, ECG = ecg) = $ \\ \\ \\
+$\frac{ \substack{P(A = a)P(G = g)P(CH = ch | A = a, G = g)P(BP = bp | G = g)P(HD = N | CH = ch, BP = bp) \times \\ P(HR = hr | A = a, BP = bp, HD = N)
+    P(CP = cp | HD = N)P(EIA = eia | HD = N) P(ECG = ecg | HD = N)} }
+    {\sum_{hd}{ \substack{P(A = a)P(G = g)P(CH = ch | A = a, G = g)P(BP = bp | G = g)P(HD = hd | CH = ch, BP = bp) \times \\P(HR = hr | A = a, BP = bp, HD = hd)
+    P(CP = cp | HD = hd)P(EIA = eia | HD = hd) P(ECG = ecg | HD = hd)} } } $ \\ \\ \\
+$\frac{ \substack{\bcancel{P(A = a)}\bcancel{P(G = g)}\bcancel{P(CH = ch | A = a, G = g)}\bcancel{P(BP = bp | G = g)}P(HD = N | CH = ch, BP = bp) \times \\ P(HR = hr | A = a, BP = bp, HD = N)
+    P(CP = cp | HD = N)P(EIA = eia | HD = N) P(ECG = ecg | HD = N)} }
+    {\sum_{hd}{ \substack{\bcancel{P(A = a)}\bcancel{P(G = g)}\bcancel{P(CH = ch | A = a, G = g)}\bcancel{P(BP = bp | G = g)}P(HD = hd | CH = ch, BP = bp) \times \\P(HR = hr | A = a, BP = bp, HD = hd)
+    P(CP = cp | HD = hd)P(EIA = eia | HD = hd) P(ECG = ecg | HD = hd)} } } $ \\ \\ \\
+$ \frac{P(HD = N| CH = ch, BP = bp)P(HR = hr | A = a, BP = bp, HD = N)P(CP = cp | HD = N)P(EIA = eia | HD = N)P(ECG = ecg | HD = N)}
+    {\sum_{hd} P(HD = hd| CH = ch, BP = bp)P(HR = hr | A = a, BP = bp, HD = hd)P(CP = cp | HD = hd)P(EIA = eia | HD = hd)P(ECG = ecg | HD = hd)}
+$
+\subsection*{Part (c) : }
+
+\begin{tabular}{|c|c|c|c|}\hline
+Fold & No correct & No total & $\% Accuracy $  \\ \hline\hline
+1 & 48 & 60 & 80 \\ \hline
+2 & 48 & 60 & 80 \\ \hline
+3 & 43 & 60 & 71.66 \\ \hline
+4 & 43 & 60 & 71.66 \\ \hline
+5 & 44 & 60 & 73.33\\ \hline\hline
+Avg(Mean) & 45.2 & 60 & 75.33 \\\hline
+\end{tabular}
+\vspace{1em} \\
+The variance is $3.862$.
+
+\section*{7. Modelling}
+\subsection*{Part(a) : model}
+\begin{center}
+    \includegraphics[scale=0.5,clip]{gm_drawing.png}
+\end{center}
+\subsection*{Part (b) : factorization}
+\begin{align*}
+P(X) &= \prod_{i=1}^{\# nodes} P(X_i | Pa_{X_i}^{G}) \\
+ P(A, G, CH, BP, HD, HR, CP, EIA, ECG) &= P(A)P(G)(CH | A, G)P(BP | A, G)P(HD | CH, BP)
+                              \nonumber \\ &\qquad{} \times P(HR | HD) P(CP | HD)P(EIA|HD)P(ECG |HD) 
+\end{align*}
+\subsection*{Part (c) : design choice}
+Idea was to kind of simulate neural-network style like structure with no latent variables. 
+\subsection*{Part (d) : results}
+\begin{tabular}{|c|c|c|c|}\hline
+Fold & No correct & No total & $\% Accuracy $  \\ \hline\hline
+1 & 48 & 60 & 80 \\ \hline
+2 & 47 & 60 & 78.33 \\ \hline
+3 & 45 & 60 & 75.00 \\ \hline
+4 & 43 & 60 & 71.66 \\ \hline
+5 & 42 & 60 & 70\\ \hline\hline
+Avg(Mean) & 45 & 60 & 75 \\\hline
+\end{tabular}
+\vspace{1em} \\
+The Std Dev is $3.801$.
+
+\textbf{Analysis: } The average accuracy and Std Dev is slightly less than given model. Above model fairs better only in 3rd test data.
+
+
+\end{document}          
