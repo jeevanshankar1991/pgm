@@ -60,7 +60,47 @@ def log_partition(f, word):
 		word = ''.join(word_comb)
 		energy = negative_energy(f, word)
 		partition += math.exp(energy)
-	print math.log(partition)
+	return math.log(partition)
+
+''' Question - 4 '''
+def best_sequence(f, word):
+	partition = float(0.0)
+	max_energy = 0
+	best_seq = ""
+	chars = []
+	for i in range(len(word)):
+		chars.append( labels.keys() )
+	for word_comb in itertools.product(*chars):
+		word = ''.join(word_comb)
+		energy = math.exp( negative_energy(f, word) )
+		if (best_seq == "" or energy > max_energy):
+			max_energy = energy 
+			best_seq = word
+		partition += energy
+	return (max_energy/partition, best_seq)
+
+''' Question - 5 '''
+def marginal_prob(f, word):
+	partition = float(0.0)
+	chars = []
+	d = DefaultDict(DefaultDict(0))
+	for i in range(len(word)):
+		chars.append( labels.keys() )
+
+	for word_comb in itertools.product(*chars):
+		word = ''.join(word_comb)
+		energy = math.exp( negative_energy(f, word) )
+		partition += energy
+		for i in range(len(word)):
+				d[i][ word[i] ] += energy 
+	for i in range(len(word)):
+		total = 0
+		print i , ": ", 
+		for c in labels.keys():
+			total += d[i][c]
+		for c in labels.keys():
+			print c, ":" , d[i][c]/partition,
+		print 
 
 
 
@@ -78,9 +118,18 @@ if __name__ == "__main__":
      print negative_energy('data/test_img2.txt', 'net')
      print negative_energy('data/test_img3.txt', 'trend')
      ### question-3 ####
-     print 'log paritition'
-     print log_partition('data/test_img1.txt', 'tree')
-     print log_partition('data/test_img2.txt', 'net')
-     print log_partition('data/test_img3.txt', 'trend')
+#     print 'log paritition'
+#print log_partition('data/test_img1.txt', 'tree')
+#     print log_partition('data/test_img2.txt', 'net')
+#    print log_partition('data/test_img3.txt', 'trend')
+     ### question - 4 ####
+     print 'best sequence'
+     print best_sequence('data/test_img1.txt', 'tree')
+     print best_sequence('data/test_img2.txt', 'net')
+     print best_sequence('data/test_img3.txt', 'trend')
+     print 'marginal '
+     marginal_prob('data/test_img1.txt', 'tree')
+     marginal_prob('data/test_img2.txt', 'net')
+     marginal_prob('data/test_img3.txt', 'trend')
 
 
