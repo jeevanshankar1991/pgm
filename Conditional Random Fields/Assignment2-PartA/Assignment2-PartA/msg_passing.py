@@ -69,7 +69,7 @@ def create_clique_tree(f, word):
 		         print c1, c2, clique[i][ labels[c1] ][ labels[c2] ]
 
 ### Question - 2 : log space messages ###
-def logspace_sumproduct(f, word):
+def logspace_sumproduct():
 	''' msg(3,2) = sum over 4 '''
 	global bmsg
 	global fmsg
@@ -100,7 +100,7 @@ def logspace_sumproduct(f, word):
 		print fmsg[i]
 
 ### Question - 3 : compute the log beliefs ###
-def bp(f, word):
+def beliefs():
 	global belief 
 	l = len(word)
 	nclique = l-1
@@ -119,7 +119,7 @@ def bp(f, word):
 	       print
 
 ## Question - 5 ###
-def marginals(f, word):
+def marginals():
       global pairwise_marginal
       global singlevar_marginal
       l = len(word)
@@ -147,7 +147,7 @@ def marginals(f, word):
 	      print singlevar_marginal[i]
 
              			 
-def test_sum_product(f, word):
+def test_sum_product(word):
 	best_seq = []
 	l = len(word)
 	for i in range(l):
@@ -165,15 +165,14 @@ if __name__ == "__main__":
      load_transition_params('model/transition-params.txt')
      f = sys.argv[1]
      word = sys.argv[2]
-     ### Question - 1 ### 
+
+     ### Sum Product Algo ###
      create_clique_tree(f, word)
-     ### Question - 2 ###
-     logspace_sumproduct(f, word)
-     ### Question - 3 ###
-     bp(f, word)
-     ### Question - 4 ####
-     marginals(f, word)
+     logspace_sumproduct()
+     beliefs()
+     marginals()
+
      ### Question - 5 ###
-     test_sum_product(f,  word)
+     test_sum_product(word)
 
 
