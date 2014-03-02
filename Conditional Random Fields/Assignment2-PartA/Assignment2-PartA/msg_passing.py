@@ -17,7 +17,7 @@ log_msg = None
 def logsumexp(lst):
 	c = max(lst)
 	lst = map(lambda x : math.exp(x-c), lst)
-	return c + sum(lst)
+	return c + math.log( sum(lst) )
 
 def load_feature_params(f):
         i = 0
@@ -71,22 +71,22 @@ def logspace_sumproduct(f, word):
 	bmsg = zeros( (nclique-1, n) )
 	fmsg = zeros( (nclique-1, n) )
         ## backward pass
-	'''print sum(clique[nclique-1], axis=1)
 	for i in range(n):
 	    bmsg[0][i]  = logsumexp( clique[nclique-1,i,:] )
+	print bmsg[0]
 	for i in range(1, nclique-1):
-		 bmsg[i] = logsumexp(clique[i] + bmsg[i-1])
+		 for j in range(n):
+		     bmsg[i][j] = logsumexp(clique[nclique-1-i, j , :] + bmsg[i-1])
+		 print bmsg[i]
 	
-        ## forward pass '''
+        ## forward pass 
 	for i in range(n):
 		fmsg[0][i] = logsumexp( clique[0, :, i] )
 	print fmsg[0]
-	'''
-	msg[0][1] = logsumexp( sum(clique[0], axis = 0) )
-	for i in range(1, l-2):
-		log_msg[i][i-1] = logsumexp(clique[i] + log_msg[i+1][i])
-	print log_msg
-	'''
+	for i in range(1,nclique-1):
+		for j in range(n):
+		    fmsg[i][j] = logsumexp( clique[i, :, j] + fmsg[i-1] )
+		print fmsg[i]
 
 if __name__ == "__main__":
 
