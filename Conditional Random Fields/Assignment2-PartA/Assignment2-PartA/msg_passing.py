@@ -11,7 +11,9 @@ n = 10
 WCC = zeros( (n, n) )
 WCF = zeros( (n, size) ) 
 clique = None
-log_msg = None
+fmsg = None
+bmsg = None
+belief = None
 
 ''' logsumexp trick '''
 def logsumexp(lst):
@@ -62,22 +64,28 @@ def create_clique_tree(f, word):
 		for c1 in ['e', 't', 'r']:
 		   for c2 in ['e', 't', 'r']:
 		         print c1, c2, clique[i][ labels[c1] ][ labels[c2] ]
-### Question - 2 ###
+
+### Question - 2 : log space messages ###
 def logspace_sumproduct(f, word):
 	''' msg(3,2) = sum over 4 '''
-	global log_msg
+	global bmsg
+	global fmsg
 	l = len(word)
 	nclique = l-1
-	bmsg = zeros( (nclique-1, n) )
-	fmsg = zeros( (nclique-1, n) )
+	nmsg = nclique-1
+	bmsg = zeros( (nmsg, n) )
+	fmsg = zeros( (nmsg, n) )
         ## backward pass
+	k = nmsg-1
 	for i in range(n):
-	    bmsg[0][i]  = logsumexp( clique[nclique-1,i,:] )
-	print bmsg[0]
+	    bmsg[k][i]  = logsumexp( clique[nclique-1,i,:] )
+	print bmsg[k]
+	k -= 1
 	for i in range(1, nclique-1):
 		 for j in range(n):
-		     bmsg[i][j] = logsumexp(clique[nclique-1-i, j , :] + bmsg[i-1])
-		 print bmsg[i]
+		     bmsg[k][j] = logsumexp(clique[nclique-1-i, j , :] + bmsg[k+1])
+		 print bmsg[k]
+		 k -= 1
 	
         ## forward pass 
 	for i in range(n):
@@ -88,6 +96,42 @@ def logspace_sumproduct(f, word):
 		    fmsg[i][j] = logsumexp( clique[i, :, j] + fmsg[i-1] )
 		print fmsg[i]
 
+### Question - 3 : compute the log beliefs ###
+def bp(f, word):
+	global belief 
+	l = len(word)
+	nclique = l-1
+	belief = zeros( (nclique, n, n) )
+        ## compute the beliefs
+	belief[0] = clique[0] + matrix(bmsg[0])
+	for i in range(1, nclique-1):
+		belief[i] = clique[i] + matrix(fmsg[i-1]).T + matrix(bmsg[i])
+	belief[nclique-1] = clique[nclique-1] + matrix(fmsg[nclique-2]).T
+
+	for i in range(nclique):
+	  print "clique #: ", i 
+	  for y1 in ['e', 't']:
+	       for y2 in ['e', 't']:
+	         print belief[i][labels[y1]][labels[y2]],
+	       print
+
+## Question - 5 ###
+def marginals(f, word):
+      l = len(word)
+      nclique = l-1
+      for i in range(nclique):
+	     total = 0
+             for c1 in range(n):
+                for c2 in range(n):
+                         total += math.exp(belief[i][c1][c2])
+	     for c1 in ['e', 't', 'r']:
+		 for c2 in ['e', 't', 'r']:
+			print math.exp(belief[i][labels[c1]][ labels[c2] ])/total,
+	         print
+	     print 
+             			 
+
+
 if __name__ == "__main__":
 
      load_feature_params('model/feature-params.txt')
@@ -97,5 +141,8 @@ if __name__ == "__main__":
      ### Question - 2 ###
      logspace_sumproduct('data/test_img1.txt', 'tree')
      ### Question - 3 ###
+     bp('data/test_img1.txt', 'tree')
+     ### Question - 4 ####
+     marginals('data/test_img1.txt', 'tree')
 
 
