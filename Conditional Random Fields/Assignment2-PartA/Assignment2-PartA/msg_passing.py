@@ -5,6 +5,7 @@ import math
 import itertools
 
 labels = {'e':0,'t':1,'a':2,'i':3,'n':4,'o':5,'s':6,'h':7,'r':8,'d':9}
+rev_labels = {0:'e', 1:'t', 2:'a', 3:'i', 4:'n', 5:'o', 6:'s', 7:'h', 8:'r', 9:'d'}
 
 size = 321
 n = 10
@@ -14,6 +15,8 @@ clique = None
 fmsg = None
 bmsg = None
 belief = None
+pairwise_marginal = None
+singlevar_marginal = None 
 
 ''' logsumexp trick '''
 def logsumexp(lst):
@@ -117,32 +120,60 @@ def bp(f, word):
 
 ## Question - 5 ###
 def marginals(f, word):
+      global pairwise_marginal
+      global singlevar_marginal
       l = len(word)
       nclique = l-1
+      pairwise_marginal = zeros( (nclique, n, n) )
+      singlevar_marginal = zeros( (l, n) )
       for i in range(nclique):
 	     total = 0
              for c1 in range(n):
                 for c2 in range(n):
                          total += math.exp(belief[i][c1][c2])
+	     print "clique # ", i, total
+	     for c1 in range(n):
+		     for c2 in range(n):
+			     pairwise_marginal[i][c1][c2] = math.exp(belief[i][c1][c2])/total
 	     for c1 in ['e', 't', 'r']:
 		 for c2 in ['e', 't', 'r']:
-			print math.exp(belief[i][labels[c1]][ labels[c2] ])/total,
+			print pairwise_marginal[i][ labels[c1]][ labels[c2] ], 
 	         print
-	     print 
+	     print
+	     for c1 in range(n):
+		     singlevar_marginal[i][c1] = sum(pairwise_marginal[i,c1,:])
+		     singlevar_marginal[i+1][c1] = sum(pairwise_marginal[i, :, c1])
+      for i in range(l):
+	      print singlevar_marginal[i]
+
              			 
+def test_sum_product(f, word):
+	best_seq = []
+	l = len(word)
+	for i in range(l):
+		idx = argmax(singlevar_marginal[i])
+		best_seq.append( rev_labels[idx] )
+	best_word = ''.join(best_seq)
+	print best_word
+		
+
 
 
 if __name__ == "__main__":
 
      load_feature_params('model/feature-params.txt')
      load_transition_params('model/transition-params.txt')
+     f = sys.argv[1]
+     word = sys.argv[2]
      ### Question - 1 ### 
-     create_clique_tree('data/test_img1.txt', 'tree')
+     create_clique_tree(f, word)
      ### Question - 2 ###
-     logspace_sumproduct('data/test_img1.txt', 'tree')
+     logspace_sumproduct(f, word)
      ### Question - 3 ###
-     bp('data/test_img1.txt', 'tree')
+     bp(f, word)
      ### Question - 4 ####
-     marginals('data/test_img1.txt', 'tree')
+     marginals(f, word)
+     ### Question - 5 ###
+     test_sum_product(f,  word)
 
 
