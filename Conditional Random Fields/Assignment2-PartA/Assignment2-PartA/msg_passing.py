@@ -51,30 +51,42 @@ def create_clique_tree(f, word):
 	node_potential = get_node_potential(f)
 	clique = zeros( (l-1, n, n) )
 	for i in range(l-1):
-		clique[i] = node_potential[i] * WCC
-		if (i == l-1):
-			clique[i] *= node_potential[i+1]
+		if (i == l-2):
+			clique[i] = matrix(node_potential[i]).T + matrix(node_potential[i+1]) + WCC
+		else :
+			clique[i] = matrix(node_potential[i]).T +  WCC
+
 	# report the clique potentials
 	for i in range(l-1):
-		print clique[i]
-
+		print "clique ", i
+		for c1 in ['e', 't', 'r']:
+		   for c2 in ['e', 't', 'r']:
+		         print c1, c2, clique[i][ labels[c1] ][ labels[c2] ]
 ### Question - 2 ###
 def logspace_sumproduct(f, word):
 	''' msg(3,2) = sum over 4 '''
 	global log_msg
-	log_clique = log(clique) ## converts very variable to log 
 	l = len(word)
-	log_msg = zeros( (l-1, l-1, n) )  # for eg, msg[3,2], msg[2,1], msg[1,2], msg[2,3] 
-	
+	nclique = l-1
+	bmsg = zeros( (nclique-1, n) )
+	fmsg = zeros( (nclique-1, n) )
         ## backward pass
-	log_msg[l-2][l-3] = logsumexp( sum(log_clique[i], axis=1) )
-	for i in range(l-3, 0, -1):
-		 log_msg[i][i-1] = logsumexp(log_clique[i] + log_msg[i+1][i])
-	## forward pass
-	msg[0][1] = logsumexp( sum(log_clique[0], axis = 0) )
+	'''print sum(clique[nclique-1], axis=1)
+	for i in range(n):
+	    bmsg[0][i]  = logsumexp( clique[nclique-1,i,:] )
+	for i in range(1, nclique-1):
+		 bmsg[i] = logsumexp(clique[i] + bmsg[i-1])
+	
+        ## forward pass '''
+	for i in range(n):
+		fmsg[0][i] = logsumexp( clique[0, :, i] )
+	print fmsg[0]
+	'''
+	msg[0][1] = logsumexp( sum(clique[0], axis = 0) )
 	for i in range(1, l-2):
-		log_msg[i][i-1] = logsumexp(log_clique[i] + log_msg[i+1][i])
+		log_msg[i][i-1] = logsumexp(clique[i] + log_msg[i+1][i])
 	print log_msg
+	'''
 
 if __name__ == "__main__":
 
