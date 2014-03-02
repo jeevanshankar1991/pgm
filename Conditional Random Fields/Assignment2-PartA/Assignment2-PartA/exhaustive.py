@@ -28,6 +28,8 @@ def load_transition_params(f):
 
 ''' Question -1 ''' 
 def node_potential_conditional(f):
+	''' Factor reduction ''' 
+	''' f(Dk) = f(Dk, xk) where xk is known ''' 
 	node_potential = []
 	for line in open(f, 'r'):
  	        potential = zeros(n)
@@ -40,12 +42,14 @@ def node_potential_conditional(f):
 
 ''' Question - 2 '''
 def negative_energy(f, word):
+	''' compute the energy of the configuration (unnormalized gibbs measure)'''
+	''' sum of all node potentials and edge potentials '''
 	energy = 0
 	node_potential = node_potential_conditional(f)
 	for i in range(len(word)-1):
 		j = labels[ word[i] ]
 		k = labels[ word[i+1] ]
-		energy += node_potential[i][j] + WCC[j][k]
+		energy += node_potential[i][j] + WCC[j][k] ### WCC[j][k] -> edge potential 
 	j = labels[ word[-1] ]
 	energy += node_potential[len(word)-1][j]
 	return energy
