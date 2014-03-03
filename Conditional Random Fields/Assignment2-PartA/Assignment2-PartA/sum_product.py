@@ -9,6 +9,7 @@ rev_labels = {0:'e', 1:'t', 2:'a', 3:'i', 4:'n', 5:'o', 6:'s', 7:'h', 8:'r', 9:'
 
 size = 321
 n = 10
+
 WCC = zeros( (n, n) )
 WCF = zeros( (n, size) ) 
 clique = None
@@ -17,7 +18,6 @@ bmsg = None
 belief = None
 pairwise_marginal = None
 singlevar_marginal = None 
-
 ''' logsumexp trick '''
 def logsumexp(lst):
 	c = max(lst)
@@ -63,13 +63,17 @@ def create_clique_tree(f, word):
 
 	# report the clique potentials
 	for i in range(l-1):
-		print "clique ", i
+		print "potentials for clique #", i
+		print "\te", "\tt", "\tr"
 		for c1 in ['e', 't', 'r']:
+		   print c1, 
 		   for c2 in ['e', 't', 'r']:
-		         print c1, c2, clique[i][ labels[c1] ][ labels[c2] ]
+		         print clique[i][ labels[c1] ][ labels[c2] ],
+		   print
+		print
 
 ### Question - 2 : log space messages ###
-def logspace_sumproduct():
+def logspace_messages():
 	''' msg(3,2) = sum over 4 '''
 	global bmsg
 	global fmsg
@@ -81,23 +85,27 @@ def logspace_sumproduct():
         ## backward pass
 	for i in range(n):
 	    bmsg[0][i]  = logsumexp( clique[nclique-1,i,:] )
-	print bmsg[0]
 	for i in range(1, nclique-1):
 		 for j in range(n):
 		     bmsg[i][j] = logsumexp(clique[nclique-1-i, j , :] + bmsg[i-1])
-		 print bmsg[i]
 	
         ## forward pass 
 	for i in range(n):
 		fmsg[0][i] = logsumexp( clique[0, :, i] )
-	print fmsg[0]
 	for i in range(1,nclique-1):
 		for j in range(n):
 		    fmsg[i][j] = logsumexp( clique[i, :, j] + fmsg[i-1] )
-		print fmsg[i]
+	## print messages
+	print "LOG SPACE MESSAGES"
+	print "forward messages" 
+	for i in range(nmsg):
+		print i+1, "->", i+2, fmsg[i]
+	print "backward messages"
+	for i in range(nmsg):
+		print nclique - i, "->", nclique-i-1, bmsg[i]
 
 ### Question - 3 : compute the log beliefs ###
-def beliefs():
+def logspace_beliefs():
 	global belief 
 	l = len(word)
 	nclique = l-1
@@ -109,9 +117,12 @@ def beliefs():
 		belief[i] = clique[i] + matrix(fmsg[i-1]).T + matrix(bmsg[nclique-i-2])
 	belief[nclique-1] = clique[nclique-1] + matrix(fmsg[nclique-2]).T
 
+	### print the beliefs
 	for i in range(nclique):
-	  print "clique #: ", i 
+	  print "belief #: ", i 
+	  print "\te", "\tt"
 	  for y1 in ['e', 't']:
+	       print y1,
 	       for y2 in ['e', 't']:
 	         print belief[i][labels[y1]][labels[y2]],
 	       print
@@ -145,32 +156,77 @@ def marginals():
 	      print singlevar_marginal[i]
 
              			 
-def test_sum_product(word):
+def predict(word):
 	best_seq = []
 	l = len(word)
 	for i in range(l):
 		idx = argmax(singlevar_marginal[i])
 		best_seq.append( rev_labels[idx] )
 	best_word = ''.join(best_seq)
-	print best_word
-		
+	return best_word
 
+def logZ():
+	Z = float(0.0)
+	for c1 in range(n):
+		for c2 in range(n):
+			Z += math.exp( belief[1][c1][c2] )
+	return math.log(Z)
 
+def energy(word):
+	l = len(word)
+	nclique = l-1
+	energy = float(0.0)
+	for i in range(nclique):
+		y1 = labels[word[i]]
+		y2 = labels[word[i+1]]
+		energy += clique[i][y1][y2]
+	return energy
+
+def log_likelihood(word):
+         return energy(word) - logZ()
 
 if __name__ == "__main__":
 
      load_feature_params('model/feature-params.txt')
      load_transition_params('model/transition-params.txt')
-     f = sys.argv[1]
-     word = sys.argv[2]
+     cnt = 1
+     correct = 0
+     total = 0
+     for line in open('data/test_words.txt', 'r'):
+        f = "data/test_img" + str(cnt) + ".txt"
+        word = line.strip()
 
-     ### Sum Product Algo ###
-     create_clique_tree(f, word)
-     logspace_sumproduct()
-     beliefs()
-     marginals()
+     	### Sum Product Algo ###
+    	create_clique_tree(f, word)
+     	logspace_messages()
+     	logspace_beliefs()
+     	marginals()
 
-     ### Question - 5 ###
-     test_sum_product(word)
+        ### Question - 5 ###
+     	pred_word = predict(word)
+	for i in range(len(word)):
+		if word[i] == pred_word[i]:
+		    correct += 1
+		total += 1
+	cnt += 1
+     print float(correct)/float(total)
+     i = 1
+     total_log_likelihood = 0
+     for line in open('data/train_words.txt', 'r'):
+	     f = "data/train_img" + str(i) + ".txt"
+	     word = line.strip()
+    	     
+	     create_clique_tree(f, word)
+     	     logspace_messages()
+     	     logspace_beliefs()
+     	     marginals()
+	     
+	     total_log_likelihood += log_likelihood(word)
+	     i += 1
+	     if i == 51 : 
+	        break
+     print total_log_likelihood/50.00
+	 
+     
 
 
