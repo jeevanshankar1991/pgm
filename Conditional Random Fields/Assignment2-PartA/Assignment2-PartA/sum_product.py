@@ -12,19 +12,24 @@ n = 10
 
 WCC = zeros( (n, n) )
 WCF = zeros( (n, size) ) 
+l = 0
+report = False
+node_potential = []
 clique = None
 fmsg = None
 bmsg = None
 belief = None
 pairwise_marginal = None
 singlevar_marginal = None 
-''' logsumexp trick '''
+
+
 def logsumexp(lst):
 	c = max(lst)
 	lst = map(lambda x : math.exp(x-c), lst)
 	return c + math.log( sum(lst) )
 
 def load_feature_params(f):
+	global WCF
         i = 0
 	for line in open(f, 'r'):
 		wgts = map(lambda x : float(x), line.strip().split(' '))
@@ -32,28 +37,24 @@ def load_feature_params(f):
 		i += 1
 
 def load_transition_params(f):
+	global WCC
 	i = 0
 	for line in open(f, 'r'):
 		wgts = map(lambda x : float(x), line.strip().split(' '))
 		WCC[i] = wgts
 		i += 1
 
-def get_node_potential(f):
-	i = 0
-	node_potential = []
+def calc_node_potential(f):
+	global node_potential
 	for line in open(f, 'r'):
 		features = map(lambda x : float(x), line.strip().split(' '))
 		potential = zeros(n)
 		for c in range(n):
 			potential[c] = dot(WCF[c], features)
 		node_potential.append( potential )
-	return node_potential
 	
-### Question - 1 ####
-def create_clique_tree(f, word):
+def create_clique_tree():
 	global clique
-	l = len(word)
-	node_potential = get_node_potential(f)
 	clique = zeros( (l-1, n, n) )
 	for i in range(l-1):
 		if (i == l-2):
@@ -62,8 +63,9 @@ def create_clique_tree(f, word):
 			clique[i] = matrix(node_potential[i]).T +  WCC
 
 	# report the clique potentials
-	for i in range(l-1):
-		print "potentials for clique #", i
+	if report :
+	   for i in range(l-1):
+		print "clique potentials #", i
 		print "\te", "\tt", "\tr"
 		for c1 in ['e', 't', 'r']:
 		   print c1, 
@@ -72,12 +74,9 @@ def create_clique_tree(f, word):
 		   print
 		print
 
-### Question - 2 : log space messages ###
-def logspace_messages():
-	''' msg(3,2) = sum over 4 '''
+def pass_messages():
 	global bmsg
 	global fmsg
-	l = len(word)
 	nclique = l-1
 	nmsg = nclique-1
 	bmsg = zeros( (nmsg, n) )
@@ -95,19 +94,20 @@ def logspace_messages():
 	for i in range(1,nclique-1):
 		for j in range(n):
 		    fmsg[i][j] = logsumexp( clique[i, :, j] + fmsg[i-1] )
-	## print messages
-	print "LOG SPACE MESSAGES"
-	print "forward messages" 
-	for i in range(nmsg):
-		print i+1, "->", i+2, fmsg[i]
-	print "backward messages"
-	for i in range(nmsg):
-		print nclique - i, "->", nclique-i-1, bmsg[i]
 
-### Question - 3 : compute the log beliefs ###
-def logspace_beliefs():
+	## report messages
+	if report  :
+	  print '-'*75
+	  print "log space messages\n"
+          print "forward messages\n" 
+	  for i in range(nmsg):
+		print "delta", i+1, "->", i+2, fmsg[i]
+	  print "\nbackward messages\n"
+	  for i in range(nmsg):
+		print "delta", nclique - i, "->", nclique-i-1, bmsg[i]
+
+def calc_beliefs():
 	global belief 
-	l = len(word)
 	nclique = l-1
 	nmsg = nclique - 1
 	belief = zeros( (nclique, n, n) )
@@ -118,20 +118,23 @@ def logspace_beliefs():
 	belief[nclique-1] = clique[nclique-1] + matrix(fmsg[nclique-2]).T
 
 	### print the beliefs
-	for i in range(nclique):
-	  print "belief #: ", i 
-	  print "\te", "\tt"
-	  for y1 in ['e', 't']:
+	if report :
+	 print '-'*75
+	 print "beliefs "  
+	 for i in range(nclique):
+	   print "Beta #: ", i 
+	   print "\te", "\tt"
+	   for y1 in ['e', 't']:
 	       print y1,
 	       for y2 in ['e', 't']:
 	         print belief[i][labels[y1]][labels[y2]],
-	       print
+	       print 
+	   print 
 
 ## Question - 5 ###
-def marginals():
+def calc_marginals():
       global pairwise_marginal
       global singlevar_marginal
-      l = len(word)
       nclique = l-1
       pairwise_marginal = zeros( (nclique, n, n) )
       singlevar_marginal = zeros( (l, n) )
@@ -140,25 +143,31 @@ def marginals():
              for c1 in range(n):
                 for c2 in range(n):
                          total += math.exp(belief[i][c1][c2])
-	     print "clique # ", i, total
 	     for c1 in range(n):
 		     for c2 in range(n):
 			     pairwise_marginal[i][c1][c2] = math.exp(belief[i][c1][c2])/total
-	     for c1 in ['e', 't', 'r']:
-		 for c2 in ['e', 't', 'r']:
-			print pairwise_marginal[i][ labels[c1]][ labels[c2] ], 
-	         print
-	     print
 	     for c1 in range(n):
 		     singlevar_marginal[i][c1] = sum(pairwise_marginal[i,c1,:])
 		     singlevar_marginal[i+1][c1] = sum(pairwise_marginal[i, :, c1])
-      for i in range(l):
-	      print singlevar_marginal[i]
+      if report :
+	  print '-'*75
+	  print "pair-wise marginals"
+	  for i in range(nclique):
+	     print 'Y' + str(i+1), 'Y' + str(i+2)
+	     print "\te", "\t\tt\t", "\tr"
+	     for y1 in ['e', 't', 'r']:
+	         print y1,
+		 for y2 in ['e', 't', 'r']:
+			print pairwise_marginal[i][ labels[y1]][ labels[y2] ], 
+	         print
+	     print
+          print "single var marginals : "
+          for i in range(l):
+	      print "Y" + str(i+1), ":", singlevar_marginal[i]
 
              			 
-def predict(word):
+def predict():
 	best_seq = []
-	l = len(word)
 	for i in range(l):
 		idx = argmax(singlevar_marginal[i])
 		best_seq.append( rev_labels[idx] )
@@ -173,7 +182,6 @@ def logZ():
 	return math.log(Z)
 
 def energy(word):
-	l = len(word)
 	nclique = l-1
 	energy = float(0.0)
 	for i in range(nclique):
@@ -182,50 +190,84 @@ def energy(word):
 		energy += clique[i][y1][y2]
 	return energy
 
-def log_likelihood(word):
+def log_prob(word):
          return energy(word) - logZ()
+
+def do_sumproduct(f, word, r = False):
+	global l
+	global report
+	global node_potential
+	global clique
+	global fmsg
+	global bmsg
+	global belief
+	global pairwise_marginal
+	global singlevar_marginal
+
+	l = len(word)
+	report = r
+	node_potential = []
+	clique = None
+	fmsg = None
+	bmsg = None
+	belief = None
+	pairwise_marginal = None
+	singlevar_marginal = None 
+
+	calc_node_potential(f) ## factor reduction
+	create_clique_tree() ## calc clique potentials
+	pass_messages()  ## pass messages backward and forward
+	calc_beliefs()  ## calc beliefs 
+	calc_marginals()  ## calc marginals . will used for learning weights 
+	
+
+
 
 if __name__ == "__main__":
 
      load_feature_params('model/feature-params.txt')
      load_transition_params('model/transition-params.txt')
-     cnt = 1
+
      correct = 0
      total = 0
+
+     ### Question : 2.1 to 2.4 : report ###
+     do_sumproduct('data/test_img1.txt', 'tree', True)
+
+
+     cnt = 1
+     print '-'*75
+     print "Prediction of first five words :  "
+     ### Question : 2.5 : report accuracy and avg log likelihood ###
      for line in open('data/test_words.txt', 'r'):
         f = "data/test_img" + str(cnt) + ".txt"
         word = line.strip()
-
-     	### Sum Product Algo ###
-    	create_clique_tree(f, word)
-     	logspace_messages()
-     	logspace_beliefs()
-     	marginals()
-
-        ### Question - 5 ###
-     	pred_word = predict(word)
-	for i in range(len(word)):
-		if word[i] == pred_word[i]:
+	
+	do_sumproduct(f, word)
+     	pred_word = predict()
+	if cnt <= 5 :
+	     print word, pred_word
+	for j in range(len(word)):
+		if word[j] == pred_word[j]:
 		    correct += 1
 		total += 1
 	cnt += 1
-     print float(correct)/float(total)
+     print "accuracy : ", float(correct)/float(total)
+     print  
+
      i = 1
      total_log_likelihood = 0
      for line in open('data/train_words.txt', 'r'):
 	     f = "data/train_img" + str(i) + ".txt"
 	     word = line.strip()
-    	     
-	     create_clique_tree(f, word)
-     	     logspace_messages()
-     	     logspace_beliefs()
-     	     marginals()
-	     
-	     total_log_likelihood += log_likelihood(word)
+
+	     do_sumproduct(f, word)
+	     total_log_likelihood += log_prob(word)
 	     i += 1
 	     if i == 51 : 
 	        break
-     print total_log_likelihood/50.00
+     print '-'*75
+     print "total avg likelihood : ", total_log_likelihood/50.00
 	 
      
 
