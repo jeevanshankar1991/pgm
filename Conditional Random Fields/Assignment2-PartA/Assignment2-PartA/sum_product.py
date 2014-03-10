@@ -138,14 +138,11 @@ def calc_marginals():
       nclique = l-1
       pairwise_marginal = zeros( (nclique, n, n) )
       singlevar_marginal = zeros( (l, n) )
+      Z = math.exp( logZ() )
       for i in range(nclique):
-	     total = 0
-             for c1 in range(n):
-                for c2 in range(n):
-                         total += math.exp(belief[i][c1][c2])
 	     for c1 in range(n):
 		     for c2 in range(n):
-			     pairwise_marginal[i][c1][c2] = math.exp(belief[i][c1][c2])/total
+			     pairwise_marginal[i][c1][c2] = math.exp(belief[i][c1][c2])/Z
 	     for c1 in range(n):
 		     singlevar_marginal[i][c1] = sum(pairwise_marginal[i,c1,:])
 		     singlevar_marginal[i+1][c1] = sum(pairwise_marginal[i, :, c1])
@@ -176,10 +173,13 @@ def predict():
 
 def logZ():
 	Z = float(0.0)
+	lst1 = []
 	for c1 in range(n):
+		lst = []
 		for c2 in range(n):
-			Z += math.exp( belief[1][c1][c2] )
-	return math.log(Z)
+			lst.append( belief[1][c1][c2] )
+		lst1.append( logsumexp(lst) )
+	return logsumexp(lst1)
 
 def energy(word):
 	nclique = l-1
@@ -231,9 +231,10 @@ if __name__ == "__main__":
      correct = 0
      total = 0
 
+     '''
      ### Question : 2.1 to 2.4 : report ###
      do_sumproduct('data/test_img1.txt', 'tree', True)
-
+     '''
 
      cnt = 1
      print '-'*75
@@ -252,9 +253,12 @@ if __name__ == "__main__":
 		    correct += 1
 		total += 1
 	cnt += 1
+	if cnt == 11:
+	   break
      print "accuracy : ", float(correct)/float(total)
      print  
-
+      
+     '''
      i = 1
      total_log_likelihood = 0
      for line in open('data/train_words.txt', 'r'):
@@ -263,12 +267,12 @@ if __name__ == "__main__":
 
 	     do_sumproduct(f, word)
 	     total_log_likelihood += log_prob(word)
-	     i += 1
-	     if i == 51 : 
-	        break
+	     i += 1   
+	     if (i == 11):
+		     break
      print '-'*75
-     print "total avg likelihood : ", total_log_likelihood/50.00
-	 
-     
+     print i
+     print "total avg likelihood : ", total_log_likelihood/(i-1)
+     '''
 
 
