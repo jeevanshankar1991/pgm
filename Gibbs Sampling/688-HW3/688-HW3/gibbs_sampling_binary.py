@@ -30,10 +30,12 @@ def run_gibbs_sampling():
 		error = zeros([H, W])
 		for i in range(H):
 			for j in range(W):
-				prob = compute_prob(i, j, 1)
+				prob = get_prob(i, j, 1)
 				alpha = random.random()
 				Y[i][j] = 1 if alpha < prob else 0
 				sumy[i][j] += Y[i][j]
+				if i == 5 and j == 5 :
+				      print prob, alpha, Y[i][j], 
 				error[i][j] = math.fabs(sumy[i][j]/float(t) - I[i][j])
                 print "Error at", t, error[i][j]/float(H * W)
 
