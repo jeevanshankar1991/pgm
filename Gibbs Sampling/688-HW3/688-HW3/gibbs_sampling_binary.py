@@ -17,7 +17,7 @@ def load_image(f):
 def get_prob(i, j, k):
 	energy = [0, 0]
 	for s in range(2):
-	  energy[s] = (X[i][j] == s) * WL
+	  energy[s] += (X[i][j] == s) * WL
 	  energy[s] += (Y[i-1][j] == s) * WP if i-1 >=0 else 0 + (Y[i+1][j] == s) * WP if i+1 < n else 0
 	  energy[s] += (Y[i][j-1] == s) * WP if j-1 >=0 else 0 + (Y[i][j+1] == s) * WP if j+1 < n else 0
         energy = map(lambda x : math.exp(x), energy)
@@ -33,22 +33,21 @@ def run_gibbs_sampling():
 				prob = get_prob(i, j, 1)
 				alpha = random.random()
 				Y[i][j] = 1 if alpha < prob else 0
+				print Y[i][j], prob, alpha,
 				sumy[i][j] += Y[i][j]
-				if i == 5 and j == 5 :
-				      print prob, alpha, Y[i][j], 
 				error[i][j] = math.fabs(sumy[i][j]/float(t) - I[i][j])
                 print "Error at", t, error[i][j]/float(H * W)
 
 if __name__ == '__main__':
-    global img
-    global org_img
+    global WP
+    global WL
     global T 
     global X
     global Y
     global I
     I = array(load_image('data/stripes.txt'))
     X = array(load_image('data/stripes-noise.txt'))
-    Y = X  ## initialization 
+    Y = X  ## initialization
     T = int(sys.argv[1])
     WL = int(sys.argv[2])
     WP = int(sys.argv[3])
