@@ -71,32 +71,46 @@ def energy(x, h):
 	energy += dot(WC, x)
 	return energy
 
+''' conditional prob(Hk = 1 | X) '''
+def get_cond_prob_h(k, x):
+	prob = logit_fn(WB[k] + dot(WP[:, k], x))
+	return prob
+''' conditional prob(Xd = 1 | H) '''
+def get_cond_prob_x(d, h):
+	prob = logit_fn(WC[d] + dot(WP[d], h))
+	return prob 
+
 ''' sample x[d]  give h '''
-def sample_x(d, h): 
+def sample_xd(d, h): 
 	prob = logit_fn(WC[d] + dot(WP[d], h))
 	alpha = np.random.uniform()
 	return 1 if prob > alpha else 0
 
 ''' sample h[k] given x'''
-def sample_h(k, x): 
+def sample_hk(k, x): 
 	prob = logit_fn(WB[k] + dot(WP[:, k], x))
 	alpha = np.random.uniform()
 	return 1 if prob > alpha else 0
+
+''' sample x given h '''
+def sample_x(h):
+	x = array(map(lambda d : sample_xd(d, h), range(D)))
+	return x
+''' sample h given x '''
+def sample_h(x):
+	h = array(map(lambda k : sample_hk(k, x), range(K)))
+	return h
 
 ''' Block Gibbs Sampling '''
 def block_gibbs_sampler(S):
 	h = zeros([S+1, K])
 	x = zeros([S+1, D])
 	for k in range(K): h[0][k] = random.randint(0,1)
-	print h.shape, x.shape
-	print h[0]
 	for s in range(1, S+1):
-		for d in range(D):
-			x[s][d] = sample_x(d, h[s-1])
-		for k in range(K):
-			h[s][k] = sample_h(k, x[s])
+		x[s] = sample_x(h[s-1])
+		h[s] = sample_h(x[s])
                 #print s
-	return (x, h)
+	return (x[1:,:], h[1:,:])
 
 def save_img(x, name):
 	        if type(name) == type(2):
@@ -107,7 +121,44 @@ def save_img(x, name):
 			os.mkdir('output')
 	        f = 'output/' + name + ".png" 
 	        img.save(f)
-	        
+def RBMLearn():
+   #Initialize gibbs chain
+   for c in range(C):
+       for k in range(K):
+                h[c][k] = random.randint(0, 1)
+   #Initialize the parameters with Gaussian Noise
+   for d in range(D): WC[d] = np.random.gauss(0, 0.1)
+   for k in range(K): WB[k] = np.random.gauss(0, 0.1)
+   for k in range(K):
+	   for d in range(D):
+		   WP[d][k] = np.random.gauss(0, 0.1)
+   ## Run the mini-batch SGD 
+   for t in range(T):
+	   for b in range(1,B+1):
+                   gpWC = zeros(D); gpWB = zeros(K); gpWP = zeros([D, K]);
+                   gnWC = zeros(D); gnWB = zeros(K); gnWP = zeros([D, K]);
+                   ## compute the +ve gradient contribution using the data seen
+		   for n in range((b-1)*NB, b*NB):
+			  gpWC = gpWC + data_x[n]
+			  cond_probs = map(lambda k : get_cond_prob_h(k, data_x[n]), range(K))
+			  gpWB = gpWB + cond_probs
+			  gpWP = gpWP + matrix(cond_probs).T * data_x[n]
+		    
+		    ## compute the -ve gradient contribution using data sampled using Block Gibbs Sampling
+		    sampled_x, samplex_y = block_gibbs_sampler(C)
+		    for c in range(C):
+			   gpWC = gpWC + sampled_x[c]
+			   cond_probs = map(lambda k : get_cond_prob_h(k, sampled_x[n]), range(K))
+			   gpWB = gpWB + cond_probs
+			   gpWP = gpWP + matrix(cond_probs).T * sampled_x[n]
+
+	            ## Take a gradient step for the mini-batch
+		    WC = WC + alpha * (gpWC/float(NB) - gnWC/float(C) - Lambda * WC)
+		    WB = WB + alpha * (gpWB/float(NB) - gnWB/float(C) - Lambda * WB)
+		    WP = WP + alpha * (gpWP/float(NB) - gnWP/float(C) - Lambda * WP)
+   return (WP, WB, WC)
+
+   		
 
 if __name__ == '__main__':
      global D, K
